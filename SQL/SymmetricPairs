@@ -1,0 +1,17 @@
+/*
+You are given a table, Functions, containing two columns: X and Y.
+
+Two pairs (X1, Y1) and (X2, Y2) are said to be symmetric pairs if X1 = Y2 and X2 = Y1.
+
+Write a query to output all such symmetric pairs in ascending order by the value of X. List the rows such that X1 ≤ Y1.
+
+*/
+
+with f1 as (Select X, Y, row_number() over(order by X, Y) rn from Functions f1)
+Select distinct X, Y 
+from (Select  f2.X, f2.Y from f1 f2 where exists
+            (Select f3.X,f3.Y 
+            from f1 f3  
+            where f3.Y= f2.X 
+            and f3.X= f2.Y and f3.rn != f2.rn and f3.X>=f2.X )
+       )  order by X, Y ;
