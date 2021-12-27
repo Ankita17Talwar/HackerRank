@@ -1,9 +1,39 @@
-/* Part 1 - finding hackers with atleast one submission daily */
-select hacker_id, count(1) from (select Distinct hacker_id, submission_date from submissions) s1 group by hacker_id having count(1) = (select count(distinct(submission_date)) count_dates from submissions);
-
-/* */
-with hack as (select hacker_id, count(1) from (select Distinct hacker_id, submission_date from submissions) s1 group by hacker_id having count(1) = (select count(distinct(submission_date)) count_dates from submissions)) Select h.hacker_id from hackers h join hack hk on h.hacker_id= hk.hacker_id;
-
-
-
-with hack as (select hacker_id, count(1) from (select Distinct hacker_id, submission_date from submissions)s1 group by hacker_id having count(1) = (select count(distinct(submission_date)) count_dates from submissions))  Select submission_date,cnt, hacker_id,name  from (Select submission_date, hacker_id, cnt,name, row_number() over (partition by submission_date order by cnt desc, hacker_id asc) rn from (Select h.name,s.submission_date,s.hacker_id, count(s.submission_id) over(partition by s.submission_date,s.hacker_id) cnt from hackers h join hack hk on h.hacker_id= hk.hacker_id join submissions s on s.hacker_id = hk.hacker_id)) where rn =1;
+sELECT t1.submission_date, t1.h_cnt, h.hacker_id, h.name
+from (
+    sELECT submission_date,COUNT(DIStinct hacker_id) as h_cnt
+   from  (
+        Select s1.submission_date, s1.hacker_id,          
+            count(distinct(s2.submission_date)) cnt 
+            from submissions s1 
+            join submissions s2 
+                on s2.hacker_id = s1.hacker_id
+                and s2.submission_date <= s1.submission_date
+            group by s1.submission_date, s1.hacker_id 
+          )
+    where submission_date- to_date('2016-03-01','yyyy-MM-dd') +1 = cnt
+    group by submission_date
+    ) t1
+    join 
+    ( 
+        Select submission_date,hacker_id from 
+        (
+            Select s1.submission_date, s1.hacker_id,                      
+                count(*) cnt 
+            from submissions s1 
+            group by s1.submission_date, s1.hacker_id
+        ) sub
+    where not exists (
+        Select 1 from (
+            select submission_date, hacker_id, count(*) cnt 
+            from submissions 
+            group by submission_date, hacker_id
+            ) temp
+        where sub.submission_date = temp.submission_date
+            and sub.hacker_id != temp.hacker_id
+            and (temp.cnt > sub.cnt or (temp.cnt = sub.cnt and temp.hacker_id < sub.hacker_id))
+        )    
+    ) t2 
+    on t1.submission_date = t2.submission_date
+    join hackers h 
+    on t2.hacker_id = h.hacker_id
+order by t1.submission_date ;
